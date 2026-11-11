@@ -1,5 +1,5 @@
 // Offline copy for the gym: network first, cached copy when there's no signal.
-const C = "vamfit-v12";
+const C = "vamfit-v13";
 self.addEventListener("install", e => { self.skipWaiting(); e.waitUntil(caches.open(C).then(c => c.addAll(["./", "index.html", "icon.svg"]))); });
 self.addEventListener("activate", e => e.waitUntil(self.clients.claim()));
 self.addEventListener("fetch", e => {

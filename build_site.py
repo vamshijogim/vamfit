@@ -34,7 +34,7 @@ if ("serviceWorker" in navigator) addEventListener("load", () => navigator.servi
 open(page, "w", encoding="utf-8").write(head + body + sw)
 
 open(os.path.join(out, "sw.js"), "w", encoding="utf-8").write("""// Offline copy for the gym: network first, cached copy when there's no signal.
-const C = "vamfit-v12";
+const C = "vamfit-v13";
 self.addEventListener("install", e => { self.skipWaiting(); e.waitUntil(caches.open(C).then(c => c.addAll(["./", "index.html", "icon.svg"]))); });
 self.addEventListener("activate", e => e.waitUntil(self.clients.claim()));
 self.addEventListener("fetch", e => {

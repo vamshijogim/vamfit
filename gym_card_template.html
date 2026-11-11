@@ -222,6 +222,11 @@ function coachCard(t) {
 }
 
 // ---------------- Settings (saved in this browser; Export/Import as a file). The public page ships generic defaults only.
+// Auto-sync key: arrives once as #k=..., kept on this device only, then removed from the address bar.
+(function () {
+  const m = /^#k=([A-Za-z0-9_-]{43})$/.exec(location.hash || "");
+  try { if (m) { localStorage.setItem("vamfitKey", m[1]); history.replaceState(null, "", location.pathname + location.search); } } catch (e) {}
+})();
 const SETTINGS_KEY = "vamfitSettings";
 const DEFAULTS = {
   v: 1,
@@ -617,5 +622,21 @@ document.getElementById("main").addEventListener("change", e => {
 document.getElementById("main").addEventListener("toggle", e => { if (e.target.id === "guideD") try { localStorage.setItem("guideOpen", e.target.open ? "1" : "0"); } catch (err) {} }, true);
 loadWx();
 window.addEventListener("hashchange", () => { const h = fromHash(); if (h !== null && h !== cur) { cur = h; render(); } });
+// Auto-sync: settings.enc.json is published next to the page (AES-GCM). A newer "rev" replaces this device's settings.
+async function syncSettings() {
+  let k = null; try { k = localStorage.getItem("vamfitKey"); } catch (e) {}
+  if (!k || !window.crypto || !crypto.subtle) return;
+  try {
+    const r = await fetch("settings.enc.json?t=" + Date.now(), { cache: "no-store" }); if (!r.ok) return;
+    const f = await r.json(); const last = +(localStorage.getItem("vamfitRev") || 0); if (!(f.rev > last)) return;
+    const b = x => { x = x.replace(/-/g, "+").replace(/_/g, "/"); while (x.length % 4) x += "="; return Uint8Array.from(atob(x), c => c.charCodeAt(0)); };
+    const key = await crypto.subtle.importKey("raw", b(k), "AES-GCM", false, ["decrypt"]);
+    const pt = await crypto.subtle.decrypt({ name: "AES-GCM", iv: b(f.iv) }, key, b(f.ct));
+    S = merge(DEFAULTS, JSON.parse(new TextDecoder().decode(pt))); saveSettings();
+    localStorage.setItem("vamfitRev", String(f.rev)); render(); loadWx();
+  } catch (e) {}
+}
+syncSettings();
+document.addEventListener("visibilitychange", () => { if (!document.hidden) syncSettings(); });
 render();
 </script>

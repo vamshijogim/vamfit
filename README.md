@@ -38,6 +38,13 @@ The old https://vamfit-gym.netlify.app stays up and will redirect here once Netl
 - **Your private settings file:** `my-settings\vamfit-settings.json`. Rebuild it with `python make_my_settings.py` after changing the A/B days file or a time in it. On each device, open Settings → Backup → Import and pick this file from OneDrive.
 - `patch_settings_step2.py` is the one-time patch that added Settings; `gym_card_template.before-step2.html` is the copy from before it.
 
+## Auto-sync of personal settings (step 5, 2026-11-11)
+- `docs\settings.enc.json` is the private settings file, locked with AES-GCM. Without the key it's unreadable.
+- Each device opens the setup link once (site + `#k=<key>`). The browser keeps the key, and every time the page opens it loads the newest settings by itself.
+- The key lives only in `my-settings\sync-key.txt` (not in the repo) and in a private Google Calendar event.
+- To change a setting everywhere: edit `make_my_settings.py`, run it, run `python publish_settings.py`, then commit + push.
+- `patch_autosync_step5.py` is the one-time patch; `gym_card_template.before-step5.html` is the copy from before it.
+
 ## Preview site
 - New versions go to **https://vamfit-gym-preview.netlify.app** first (Netlify site `vamfit-gym-preview`). Publish to the live `vamfit-gym` only after Vamshi says yes.
 - Self-publish to preview: `npx netlify-cli deploy --prod --dir docs --site vamfit-gym-preview`
