@@ -1,0 +1,1 @@
+{"name": "VamFit Gym Card", "short_name": "VamFit", "start_url": "./", "display": "standalone", "background_color": "#0d1311", "theme_color": "#0d7a69", "icons": [{"src": "icon.svg", "sizes": "any", "type": "image/svg+xml"}, {"src": "icon-180.png", "sizes": "180x180", "type": "image/png"}]}

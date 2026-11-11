@@ -1,0 +1,10 @@
+# Personal data: never in the repo (Vamshi 2026-11-11)
+my-settings/
+*_ab_days_*.py
+make_my_settings.py
+# Local-only leftovers
+*.before-step*.html
+docs/.netlify/
+site/
+docs/_test.json
+__pycache__/

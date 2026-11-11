@@ -1,0 +1,4 @@
+# Netlify publishes the prebuilt site\ folder; nothing to build on Netlify's side.
+[build]
+  publish = "docs"
+  command = ""

@@ -1,0 +1,621 @@
+<title>VamFit Gym Card</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700&family=Source+Sans+3:wght@400;600;700&family=IBM+Plex+Mono:wght@500;600&display=swap">
+<style>
+/* Layout: one-handed gym view — sticky date bar + day strip, then one big row per exercise (name, sets, weight, tick). Food + rules fold away below. */
+:root {
+  --bg: #eef2f1; --panel: #ffffff; --ink: #142019; --muted: #5a6865; --line: #d6dfdc; --soft: #f4f8f7;
+  --accent: #0d7a69; --accent-ink: #ffffff; --accent-soft: #dcf1ec; --anchor: #9a520a; --anchor-soft: #fbecd9; --warn: #a33b2b; --warn-soft: #fbe7e3;
+  --display: "Barlow Condensed", "Arial Narrow", "Roboto Condensed", sans-serif;
+  --body: "Source Sans 3", "Segoe UI", system-ui, -apple-system, sans-serif;
+  --mono: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, monospace;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #0d1311; --panel: #151e1b; --ink: #e6eeeb; --muted: #9aaaa5; --line: #27332f; --soft: #1a2420;
+  --accent: #3cbfa4; --accent-ink: #052019; --accent-soft: #12302a; --anchor: #f0a54f; --anchor-soft: #39270f; --warn: #f0907f; --warn-soft: #3a1c17; color-scheme: dark } }
+:root[data-theme="dark"] {
+  --bg: #0d1311; --panel: #151e1b; --ink: #e6eeeb; --muted: #9aaaa5; --line: #27332f; --soft: #1a2420;
+  --accent: #3cbfa4; --accent-ink: #052019; --accent-soft: #12302a; --anchor: #f0a54f; --anchor-soft: #39270f; --warn: #f0907f; --warn-soft: #3a1c17; color-scheme: dark }
+* { box-sizing: border-box }
+body { background: var(--bg); color: var(--ink); font-family: var(--body); font-size: 16px; line-height: 1.35;
+  padding-left: max(12px, env(safe-area-inset-left, 0px)); padding-right: max(12px, env(safe-area-inset-right, 0px)); padding-block: 0 32px }
+body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-area-inset-top, 0px); z-index: 10; background: var(--bg) }
+a { color: var(--accent) }
+.wrap { max-width: 640px; margin: 0 auto; display: grid; gap: 12px }
+/* Only the date bar stays pinned while scrolling; the day strip, score and office line scroll with the page. */
+header { display: grid; gap: 8px }
+.bar { display: flex; align-items: center; gap: 8px; position: sticky; top: env(safe-area-inset-top, 0px); z-index: 5; background: var(--bg); padding-block: 8px }
+.bar h1 { font-family: var(--display); font-weight: 700; font-size: clamp(1.25rem, 6vw, 1.7rem); margin: 0; flex: 1; min-width: 0; line-height: 1.05; white-space: nowrap; overflow: hidden; text-overflow: ellipsis }
+.bar h1 small { display: block; font-family: var(--mono); font-size: .72rem; font-weight: 500; color: var(--muted) }
+button { font: inherit; color: var(--ink); background: var(--panel); border: 1px solid var(--line); border-radius: 10px; cursor: pointer }
+button:focus-visible, a:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px }
+.nav { width: 44px; height: 44px; font-size: 1.4rem }
+.days { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px }
+.days button { padding: 6px 0; display: grid; justify-items: center; line-height: 1.1; min-height: 44px }
+.days b { font-family: var(--display); font-size: 1.05rem }
+.days span { font-family: var(--mono); font-size: .7rem; color: var(--muted) }
+.days button[aria-current="date"] { background: var(--accent); border-color: var(--accent); color: var(--accent-ink) }
+.days button[aria-current="date"] span { color: var(--accent-ink) }
+.days button.today:not([aria-current="date"]) { border-color: var(--accent); border-width: 2px }
+.card { background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: 14px; display: grid; gap: 10px; min-width: 0 }
+.card h2 { font-family: var(--display); font-weight: 700; font-size: 1.9rem; margin: 0; line-height: 1; text-transform: uppercase }
+.focus { color: var(--muted); font-size: .95rem; margin: 0 }
+.chips { display: flex; flex-wrap: wrap; gap: 6px }
+.chip { font-family: var(--mono); font-size: .78rem; padding: 4px 8px; border-radius: 999px; background: var(--soft); border: 1px solid var(--line); white-space: nowrap }
+.bp { background: var(--warn-soft); color: var(--warn); border-radius: 10px; padding: 8px 10px; font-size: .88rem; font-weight: 600 }
+.progress { display: flex; align-items: center; gap: 10px; font-family: var(--mono); font-size: .85rem; color: var(--muted) }
+.progress .track { flex: 1; height: 8px; background: var(--soft); border-radius: 99px; overflow: hidden; border: 1px solid var(--line) }
+.progress .fill { height: 100%; background: var(--accent); width: 0; transition: width .2s }
+.sec { font-family: var(--display); font-weight: 700; font-size: 1.05rem; letter-spacing: .04em; text-transform: uppercase; color: var(--accent); margin: 6px 0 0 }
+ol.moves { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px }
+li.mv { display: grid; grid-template-columns: 26px 1fr 48px; gap: 10px; align-items: center; padding: 12px 10px; border: 1px solid var(--line); border-radius: 12px; background: var(--soft) }
+li.mv .n { font-family: var(--mono); font-weight: 600; color: var(--muted); text-align: center; font-size: .95rem }
+li.mv .name { font-weight: 700; font-size: 1.08rem; line-height: 1.2 }
+li.mv .name a { color: var(--ink); text-decoration: none }
+li.mv .name a::after { content: " ▶"; color: var(--accent); font-size: .78em }
+li.mv .tag { display: inline-block; font-family: var(--mono); font-size: .62rem; font-weight: 600; padding: 2px 5px; border-radius: 4px; margin-left: 6px; vertical-align: 2px }
+li.mv .tag.anchor { color: var(--anchor); background: var(--anchor-soft) }
+li.mv .tag.new { color: var(--accent); background: var(--accent-soft) }
+li.mv .row { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin-top: 6px }
+li.mv .sets { font-family: var(--mono); font-weight: 600; font-size: .95rem }
+li.mv .wt { font-family: var(--mono); font-weight: 600; font-size: .92rem; color: var(--accent); background: var(--accent-soft); padding: 1px 7px; border-radius: 6px }
+li.mv .rest { font-family: var(--mono); font-size: .82rem; color: var(--muted) }
+.tick { width: 48px; height: 48px; border-radius: 50%; font-size: 1.3rem; border: 2px solid var(--line); background: var(--panel); color: transparent }
+li.mv.done { opacity: .55 }
+li.mv.done .name { text-decoration: line-through }
+li.mv.done .tick { background: var(--accent); border-color: var(--accent); color: var(--accent-ink) }
+table { width: 100%; border-collapse: collapse; font-size: .95rem }
+td { padding: 8px 4px; border-bottom: 1px solid var(--line); vertical-align: top }
+td:first-child { font-family: var(--mono); font-size: .82rem; color: var(--muted); white-space: nowrap; width: 1%; padding-right: 10px }
+details > summary { cursor: pointer; font-family: var(--display); font-weight: 700; font-size: 1.25rem; text-transform: uppercase; list-style: none; display: flex; justify-content: space-between; align-items: center; min-height: 32px }
+details > summary::-webkit-details-marker { display: none }
+details > summary::after { content: "+"; color: var(--accent); font-size: 1.5rem }
+details[open] > summary::after { content: "−" }
+.note { color: var(--muted); font-size: .85rem; margin: 0 }
+.days button.moved { background: var(--accent-soft) }
+.days button.moved span::after { content: " ✓"; color: var(--accent) }
+.days button[aria-current="date"].moved { background: var(--accent) }
+.days button[aria-current="date"].moved span::after { color: var(--accent-ink) }
+.score { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 2px 10px; font-family: var(--mono); font-size: .82rem; font-weight: 600 }
+.score small { font: inherit; font-weight: 500; color: var(--muted) }
+.job { background: var(--accent-soft); border-radius: 10px; padding: 10px 12px; font-weight: 700; font-size: 1.05rem; line-height: 1.25 }
+.alarm { background: var(--anchor-soft); color: var(--anchor); border-radius: 10px; padding: 10px 12px; font-weight: 700 }
+.spark { font-family: var(--display); font-size: 1.35rem; font-weight: 600; line-height: 1.15; margin: 0 }
+.mywhy { color: var(--accent); font-weight: 700; margin: 0 }
+#why { width: 100%; font: inherit; padding: 8px 10px; margin-top: 4px; border: 1px solid var(--line); border-radius: 8px; background: var(--soft); color: var(--ink) }
+.run { display: grid; gap: 4px; background: var(--soft); border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; font-weight: 600 }
+.run span { display: block }
+.officeline { font-family: var(--mono); font-size: .8rem; color: var(--muted) }
+.officeline b { color: var(--anchor) }
+.set { display: grid; gap: 12px }
+.set label { display: grid; gap: 4px; font-size: .9rem; color: var(--muted) }
+.set input, .set select, .set textarea { font: inherit; color: var(--ink); background: var(--soft); border: 1px solid var(--line); border-radius: 8px; padding: 10px; width: 100%; min-height: 44px }
+.set textarea { min-height: 88px; font-family: var(--mono); font-size: .8rem }
+.set .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px }
+.set .wk { display: flex; flex-wrap: wrap; gap: 6px }
+.set .wk label { display: flex; align-items: center; gap: 4px; color: var(--ink); min-height: 44px; padding: 0 8px; border: 1px solid var(--line); border-radius: 8px }
+.set .wk input { width: auto; min-height: 0 }
+.btnrow { display: flex; flex-wrap: wrap; gap: 8px }
+.btnrow button, .btnrow label.btn { min-height: 44px; padding: 0 14px; display: inline-flex; align-items: center; border: 1px solid var(--line); border-radius: 10px; background: var(--panel); color: var(--ink); font-weight: 600; cursor: pointer }
+.btnrow .primary { background: var(--accent); color: var(--accent-ink); border-color: var(--accent) }
+.saved { color: var(--accent); font-weight: 700; min-height: 1.2em }
+.gymtog { width: 100%; min-height: 58px; font-size: 1.08rem; font-weight: 700; border-radius: 14px; border: 2px dashed var(--line); background: var(--panel) }
+.gymtog.on { border: 2px solid var(--accent); background: var(--accent-soft); color: var(--ink) }
+.mhead { display: flex; align-items: center; gap: 8px }
+.mhead h2 { flex: 1; text-align: center }
+.mgrid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px }
+.mgrid .wd { font-family: var(--mono); font-size: .7rem; color: var(--muted); text-align: center }
+.mc { position: relative; min-height: 56px; padding: 5px 2px; display: grid; align-content: start; justify-items: center; gap: 4px; border-radius: 8px }
+.mc.out { opacity: .35 }
+.mc.today { border: 2px solid var(--accent) }
+.mc b { font-family: var(--display); font-size: 1.05rem }
+.dots { display: flex; gap: 3px; flex-wrap: wrap; justify-content: center }
+.d { width: 8px; height: 8px; border-radius: 50%; display: inline-block }
+.d.work { background: #4a7fd6 } .d.family { background: #b36ad1 } .d.fit { background: var(--accent) } .d.dl { background: #e08a2e }
+.went { position: absolute; top: 2px; right: 4px; font-style: normal; color: var(--accent); font-size: .8rem; font-weight: 800 }
+.legend { display: flex; flex-wrap: wrap; gap: 6px 12px; font-size: .82rem; color: var(--muted) }
+.legend span { display: inline-flex; align-items: center; gap: 5px }
+.mlist { margin: 0; padding-left: 18px; display: grid; gap: 4px; font-size: .92rem }
+#guide summary small { font-family: var(--mono); font-size: .75rem; font-weight: 500; color: var(--muted); text-transform: none }
+.wx { font-family: var(--mono); font-size: .8rem; color: var(--muted); margin: 6px 0 0 }
+ol.guide { list-style: none; margin: 8px 0 0; padding: 0; display: grid; gap: 4px }
+ol.guide li { display: grid; grid-template-columns: 72px 1fr; gap: 8px; padding: 7px 8px; border-left: 4px solid var(--line); background: var(--soft); border-radius: 6px; font-size: .93rem; line-height: 1.25 }
+ol.guide .gt { font-family: var(--mono); font-size: .8rem; color: var(--muted); padding-top: 1px }
+ol.guide li.t-work { border-left-color: #4a7fd6 } ol.guide li.t-family { border-left-color: #b36ad1 }
+ol.guide li.t-fit { border-left-color: var(--accent) } ol.guide li.t-food { border-left-color: #c9a227 }
+ol.guide li.t-rest { border-left-color: var(--muted) } ol.guide li.t-dl { border-left-color: #e08a2e }
+ol.guide li.now { outline: 2px solid var(--accent) }
+ol.guide small { display: block; color: var(--muted); font-size: .82rem }
+.card ul.plain { margin: 8px 0 0; padding-left: 18px; display: grid; gap: 6px; font-size: .95rem }
+</style>
+
+<div class="wrap">
+  <div class="bar">
+    <button class="nav" id="prev" aria-label="Previous day">‹</button>
+    <h1 id="dateTitle"><span id="dateText">Today</span><small id="weekChip">Week 1</small></h1>
+    <button class="nav" id="next" aria-label="Next day">›</button>
+    <button class="nav" id="cal" aria-label="Month calendar">📅</button>
+    <button class="nav" id="gear" aria-label="Settings">⚙</button>
+  </div>
+  <header>
+    <div class="days" id="days" aria-label="Days of this week"></div>
+    <div class="score" id="score"></div>
+  </header>
+  <main class="wrap" id="main"></main>
+</div>
+
+<script>
+const DATA = /*__DATA__*/null;
+const DAYS = ["Monday","Tuesday","Wednesday","Thursday","Friday","Saturday","Sunday"];
+const SHORT = ["M","T","W","T","F","S","S"];
+const W1 = Date.UTC(2026, 9, 26), DAY = 86400000;
+const esc = s => String(s).replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+function chicagoToday() {
+  const p = new Intl.DateTimeFormat("en-CA", { timeZone: "America/Chicago", year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date());
+  const [y, m, d] = p.split("-").map(Number); return Date.UTC(y, m - 1, d);
+}
+const TODAY = chicagoToday();
+const fromHash = () => { const m = /^#d(\d{4})(\d{2})(\d{2})$/.exec(location.hash || ""); return m ? Date.UTC(+m[1], +m[2] - 1, +m[3]) : null; };
+let cur = fromHash() ?? TODAY;
+const dow = t => (new Date(t).getUTCDay() + 6) % 7;
+const weekOf = t => Math.max(1, Math.floor((t - dow(t) * DAY - W1) / (7 * DAY)) + 1);
+const fmt = (t, o) => new Date(t).toLocaleDateString("en-US", Object.assign({ timeZone: "UTC" }, o));
+const key = t => { const d = new Date(t); return `${d.getUTCFullYear()}${String(d.getUTCMonth() + 1).padStart(2, "0")}${String(d.getUTCDate()).padStart(2, "0")}`; };
+const isDark = t => { const d = new Date(t), m = d.getUTCMonth() + 1; return m === 11 || m === 12 || m <= 2 || (m === 3 && d.getUTCDate() < 8); };
+const loadDone = t => { try { return JSON.parse(localStorage.getItem("done" + key(t)) || "[]"); } catch (e) { return []; } };
+const saveDone = (t, a) => { try { localStorage.setItem("done" + key(t), JSON.stringify(a)); } catch (e) {} };
+
+const PLAN_START = Date.UTC(2026, 10, 2);
+const GYM_DAYS = [0, 1, 2, 3, 4];
+const dayData = t => DATA.weeks[(weekOf(t) - 1) % 8 + 1][DAYS[dow(t)]];
+const countMoves = w => w.sections.reduce((a, s) => a + s.moves.length, 0);
+const loadGym = t => { try { return localStorage.getItem("gym" + key(t)) === "1"; } catch (e) { return false; } };
+const saveGym = (t, on) => { try { if (on) localStorage.setItem("gym" + key(t), "1"); else localStorage.removeItem("gym" + key(t)); } catch (e) {} };
+const moved = t => loadDone(t).length > 0 || loadGym(t);
+// A workout day counts once 2 moves (weekends: 1) besides the after-dinner walk, always the last move, are ticked.
+const workoutDone = t => { if (loadGym(t)) return true; const walk = countMoves(dayData(t)); return loadDone(t).filter(n => n !== walk).length >= (dow(t) < 5 ? 2 : 1); };
+
+const SPARKS = [
+  "Nobody has ever finished a workout and wished they had stayed on the couch.",
+  "The hard part is the next 10 minutes, not the next hour. Shoes on.",
+  "You don't have to feel like it. The feeling shows up after the warm-up.",
+  "The kids are learning what getting older looks like by watching you.",
+  "One set counts. One walk counts. Zero is the only number that doesn't.",
+  "You have handled far harder things this year than a leg press.",
+  "An hour from now you'll either be done, or still thinking about it.",
+  "Missed yesterday? It's over. Today is the only day you can train.",
+  "This is the one hour of the day that is only yours.",
+  "You at 60 is asking for exactly one thing: this session.",
+  "Tired after work is rarely the kind a workout makes worse. Give it 10 minutes and see.",
+  "Today's walk helps today's blood sugar. It works by bedtime.",
+  "Send your challenge group a gym selfie today. Let them wonder.",
+  "One miss is nothing. Just don't miss twice."
+];
+const loadWhy = () => { try { return localStorage.getItem("why") || ""; } catch (e) { return ""; } };
+function sparkHtml(t) {
+  const why = loadWhy();
+  return `<section class="card"><p class="spark">${esc(SPARKS[Math.floor(t / DAY) % SPARKS.length])}</p>${why ? `<p class="mywhy">My why: ${esc(why)}</p>` : ""}</section>`;
+}
+
+const chicagoHour = () => +new Intl.DateTimeFormat("en-US", { timeZone: "America/Chicago", hour: "numeric", hourCycle: "h23" }).format(new Date());
+function coachCard(t) {
+  const h = chicagoHour(), today = t === TODAY, weekday = dow(t) < 5;
+  const openWake = today && (h < 12 || h >= 19), openOffice = today && weekday && h >= 12 && h < 16;
+  return `<section class="card"><details${openWake ? " open" : ""}><summary>Waking up</summary>
+    <p class="note">The heavy feeling usually fades in 15–30 minutes. Never decide anything lying in bed.</p>
+    <ul class="plain">
+      <li><b>Start here: phone across the room.</b> Charge it by the yoga mat, so you must stand to stop the alarm. No snooze.</li>
+      <li><b>Same 60 seconds:</b> every light on, cold water on your face, full glass of water. Face only, no cold shower with high BP.</li>
+      <li><b>Night before:</b> mat out, clothes on it, video ready. TV off and phone out of the bedroom at 9:00.</li>
+      <li><b>5-minute deal:</b> get on the mat and press play. You may stop after 5 minutes.</li>
+      <li><b>Rename the alarm</b> to your own why. It's the first thing you read.</li></ul></details>
+    ${weekday ? `<details${openOffice ? " open" : ""}><summary>After office</summary>
+    <p class="note">Desk tired is mostly mental tired. Moving often helps it. The couch mostly doesn't.</p>
+    <ul class="plain">
+      <li><b>Start here: TV off, no couch.</b> Eat your snack in the kitchen. Change at the 3:50 alert.</li>
+      <li><b>Start here: one song, only at 3:50.</b> It becomes your signal to leave.</li>
+      <li><b>Parking lot rule:</b> your only job is to drive there and park. Still want to go home after 5 minutes? You can.</li>
+      <li><b>Gym-only treat:</b> a podcast, songs or show you get only at the gym. Change it when it gets boring.</li>
+      <li><b>Collect proof:</b> rate your energy 1–10 before and after. Note both on your phone.</li></ul></details>` : ""}</section>`;
+}
+
+// ---------------- Settings (saved in this browser; Export/Import as a file). The public page ships generic defaults only.
+const SETTINGS_KEY = "vamfitSettings";
+const DEFAULTS = {
+  v: 1,
+  kid1: { name: "Kid 1", dropTime: "", pickupTime: "15:00", aDays: [], bDays: [], collegeStart: "" },
+  kid2: { name: "Kid 2", schoolStart: "09:00", schoolEnd: "16:30", activities: "" },
+  office: { minDays: 12, rule: "pickup", weekdays: [], arrive: "", leave: "14:30" },
+  deadlines: "",
+  location: { label: "Dallas area", lat: 32.78, lon: -96.8 },
+  routine: { leaveHome: "06:30", wake: "05:00", yoga: "05:05", gymStart: "16:30", gymEnd: "17:45", snack: "15:30", dinner: "18:10",
+             walk: "18:45", walkMin: 10, screensOff: "21:00", bed: "21:30" }
+};
+const merge = (d, s) => { const o = {}; for (const k in d) o[k] = (d[k] && typeof d[k] === "object" && !Array.isArray(d[k])) ? merge(d[k], (s || {})[k]) : ((s || {})[k] ?? d[k]); return o; };
+function loadSettings() { try { return merge(DEFAULTS, JSON.parse(localStorage.getItem(SETTINGS_KEY) || "{}")); } catch (e) { return merge(DEFAULTS, {}); } }
+function saveSettings() { try { localStorage.setItem(SETTINGS_KEY, JSON.stringify(S)); } catch (e) {} }
+let S = loadSettings(), view = "day";
+const toMin = hm => { const m = /^(\d{1,2}):(\d{2})$/.exec(hm || ""); return m ? +m[1] * 60 + +m[2] : null; };
+const t12 = mins => { if (mins == null) return ""; const h = Math.floor(mins / 60) % 24, m = mins % 60; return `${(h + 11) % 12 + 1}:${String(m).padStart(2, "0")} ${h < 12 ? "AM" : "PM"}`; };
+const T = hm => t12(toMin(hm));
+const iso = t => { const d = new Date(t); return `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, "0")}-${String(d.getUTCDate()).padStart(2, "0")}`; };
+function schoolDay(t) {
+  const k = S.kid1, d = iso(t);
+  if (k.collegeStart && d >= k.collegeStart) return null;
+  return k.aDays.includes(d) ? "A" : (k.bDays.includes(d) ? "B" : null);
+}
+function schoolRange() { const all = [...S.kid1.aDays, ...S.kid1.bDays].sort(); return all.length ? [all[0], all[all.length - 1]] : null; }
+function isOfficeDay(t) {
+  if (dow(t) > 4) return false;
+  if (S.office.rule === "weekdays") return S.office.weekdays.includes(dow(t));
+  return schoolDay(t) === "A";
+}
+function noSchoolWeekday(t) { const r = schoolRange(), d = iso(t); return !!r && dow(t) < 5 && d >= r[0] && d <= r[1] && !schoolDay(t) && !(S.kid1.collegeStart && d >= S.kid1.collegeStart); }
+function officeMonthHtml(t) {
+  if (S.office.rule === "pickup" && !schoolRange()) return "";
+  const d0 = new Date(t), y = d0.getUTCFullYear(), m = d0.getUTCMonth();
+  let planned = 0; const topups = [];
+  for (let day = 1; day <= 31; day++) {
+    const x = Date.UTC(y, m, day); if (new Date(x).getUTCMonth() !== m) break;
+    if (isOfficeDay(x)) planned++; else if (noSchoolWeekday(x)) topups.push(fmt(x, { month: "short", day: "numeric" }));
+  }
+  const need = Math.max(0, S.office.minDays - planned);
+  return `<p class="officeline">Office this month: ${planned} planned, need ${S.office.minDays}${need ? ` · <b>short ${need}</b>${topups.length ? ` · no-school weekdays to add: ${topups.join(", ")} (skip company holidays)` : " · use drop days, going in late"}` : " ✓"}</p>`;
+}
+function runHtml(t) {
+  const k1 = S.kid1, k2 = S.kid2, sd = schoolDay(t), lines = [];
+  if (sd === "A") lines.push(`🏢 Office${S.office.arrive ? ` from ${T(S.office.arrive)}` : ""} · leave ${T(S.office.leave)} · 🚗 pick up ${esc(k1.name)} by ${T(k1.pickupTime)}`);
+  else if (sd === "B") lines.push(`🚗 Drop ${esc(k1.name)} ${k1.dropTime ? `at ${T(k1.dropTime)}` : "early"} · 🏠 work from home`);
+  else if (noSchoolWeekday(t)) lines.push(`🏫 No school for ${esc(k1.name)} · can be an office day`);
+  if (dow(t) < 5 && k2.name !== DEFAULTS.kid2.name && (sd || !schoolRange())) lines.push(`🎒 ${esc(k2.name)}: school ${T(k2.schoolStart)}–${T(k2.schoolEnd)}`);
+  const ab = SHORT3[dow(t)];
+  for (const line of String(k2.activities || "").split("\n")) if (line.trim().toLowerCase().startsWith(ab)) lines.push(`🎵 ${esc(k2.name)}: ${esc(line.trim().slice(3).trim())}`);
+  for (const x of deadlinesOn(t)) lines.push(`📌 ${esc(x)}`);
+  return lines.length ? `<div class="run">${lines.map(l => `<span>${l}</span>`).join("")}</div>` : "";
+}
+const SHORT3 = ["mon", "tue", "wed", "thu", "fri", "sat", "sun"];
+function deadlinesOn(t) {
+  const d = iso(t), out = [];
+  for (const line of String(S.deadlines || "").split("\n")) { const m = /^\s*(\d{4}-\d{2}-\d{2})\s+(.+)$/.exec(line); if (m && m[1] === d) out.push(m[2].trim()); }
+  return out;
+}
+// ---------------- Weather (Open-Meteo, cached 1 hour in this browser)
+let WX = null;
+const wxKey = () => `${S.location.lat},${S.location.lon}`;
+function loadWx() {
+  try { const c = JSON.parse(localStorage.getItem("wxCache") || "null"); if (c && c.key === wxKey() && Date.now() - c.at < 3600e3) { WX = c.data; return; } } catch (e) {}
+  const u = `https://api.open-meteo.com/v1/forecast?latitude=${S.location.lat}&longitude=${S.location.lon}&daily=sunrise,sunset,temperature_2m_max,temperature_2m_min,precipitation_probability_max&hourly=temperature_2m,precipitation_probability&temperature_unit=fahrenheit&timezone=America%2FChicago&forecast_days=16&past_days=1`;
+  fetch(u).then(r => r.json()).then(d => {
+    if (!d || !d.daily) return; WX = d;
+    try { localStorage.setItem("wxCache", JSON.stringify({ key: wxKey(), at: Date.now(), data: d })); } catch (e) {}
+    const g = document.getElementById("guide"); if (g && view === "day") g.outerHTML = guideHtml(cur);
+  }).catch(() => {});
+}
+const hmOf = s => toMin(String(s).slice(11, 16));
+function wxDay(t) {
+  if (!WX) return null; const i = WX.daily.time.indexOf(iso(t)); if (i < 0) return null;
+  return { rise: hmOf(WX.daily.sunrise[i]), set: hmOf(WX.daily.sunset[i]), hi: Math.round(WX.daily.temperature_2m_max[i]), lo: Math.round(WX.daily.temperature_2m_min[i]), rain: WX.daily.precipitation_probability_max[i] };
+}
+function wxAt(t, mins) {
+  if (!WX) return null; const i = WX.hourly.time.indexOf(`${iso(t)}T${String(Math.floor(mins / 60)).padStart(2, "0")}:00`); if (i < 0) return null;
+  return { temp: Math.round(WX.hourly.temperature_2m[i]), rain: WX.hourly.precipitation_probability[i] };
+}
+function walkAdvice(t, mins) {
+  const d = wxDay(t), h = wxAt(t, mins), tips = [];
+  if (d && mins > d.set + 15) tips.push(`dark after ${t12(d.set)}: lit route + LED clip, or indoors`);
+  else if (!d && isDark(t)) tips.push("dark by then: lit route + LED clip, or indoors");
+  if (h && h.rain >= 50) tips.push(`rain ${h.rain}%: walk indoors`);
+  if (h && h.temp >= 95) tips.push(`${h.temp}°F: indoors or later`);
+  else if (h && h.temp <= 35) tips.push(`${h.temp}°F: dress warm or walk indoors`);
+  if (!tips.length && h) tips.push(`${h.temp}°F, good for outside`);
+  return tips.join(" · ");
+}
+// ---------------- Hour-by-hour guide
+function guideItems(t) {
+  const R = S.routine, i = dow(t), d = DAYS[i], sd = schoolDay(t), k1 = S.kid1, k2 = S.kid2, items = [], m = DATA.meals[d];
+  const w = dayData(t), title = w.title.split(" - ")[0];
+  const add = (mins, label, type, note) => { if (mins != null && !isNaN(mins)) items.push({ m: mins, label, type, note }); };
+  const at = hm => toMin(hm);
+  add(at(R.wake), "Wake up · phone is across the room, stand up", "rest");
+  if (i === 4) add(at(R.wake) + 10, "Optional weigh-in", "rest");
+  if (DATA.yoga[d]) add(at(R.yoga), `Yoga: ${esc(DATA.yoga[d].name)}`, "fit", "End with 3 min slow breathing. Late start? Do it whenever you're up.");
+  add(at(R.wake) + 40, "Ragi ganji + saunf water", "food");
+  if (sd === "A") {
+    add(at(R.leaveHome), "Leave for the office", "work");
+    if (S.office.arrive) add(at(S.office.arrive), "At the office", "work");
+    add(at(S.office.leave), "Leave the office", "work");
+    add(at(k1.pickupTime), `Pick up ${esc(k1.name)}`, "family");
+  } else if (sd === "B") {
+    const dm = k1.dropTime ? at(k1.dropTime) : at("07:30");
+    add(dm, `Drop ${esc(k1.name)} early`, "family", k1.dropTime ? "" : "Set the exact drop time in ⚙ Settings.");
+    add(dm + 45, "Work from home", "work");
+  } else if (i < 5 && isOfficeDay(t)) {
+    add(at(R.leaveHome), "Leave for the office", "work"); add(at(S.office.leave), "Leave the office", "work");
+  } else if (noSchoolWeekday(t)) add(at(R.leaveHome), "No school today: can be an office day", "work");
+  if (i < 5 && k2.name !== DEFAULTS.kid2.name && (sd || !schoolRange())) {
+    add(at(k2.schoolStart), `${esc(k2.name)}: school starts`, "family"); add(at(k2.schoolEnd), `${esc(k2.name)}: school ends`, "family");
+  }
+  for (const line of String(k2.activities || "").split("\n")) {
+    if (!line.trim().toLowerCase().startsWith(SHORT3[i])) continue;
+    const mm = /(\d{1,2})(?::(\d{2}))?\s*(am|pm)?/i.exec(line.slice(3));
+    let mins = null; if (mm) { let h = +mm[1]; const ap = (mm[3] || "").toLowerCase(); if (ap === "pm" && h < 12) h += 12; if (!ap && h < 8) h += 12; mins = h * 60 + (+mm[2] || 0); }
+    add(mins ?? at(k2.schoolEnd), `${esc(k2.name)}: ${esc(line.trim().slice(3).trim())}`, "family");
+  }
+  for (const x of deadlinesOn(t)) add(at(R.wake) + 1, `📌 Deadline: ${esc(x)}`, "dl");
+  if (i < 5) {
+    const gs = at(R.gymStart);
+    add(at(R.snack), `Snack: ${esc(m.snack.split(":")[0])}`, "food", "Eat it in the kitchen. TV stays off until the workout's done.");
+    add(gs - 40, "Gym clothes on · don't sit down", "fit");
+    add(gs - 15, "Keys in hand, leave for the gym", "fit");
+    add(gs, `Gym: ${esc(title)} (${t12(gs)}–${T(R.gymEnd)})`, "fit", "Tired? Short version today: warm-up + the anchor moves counts.");
+    add(at(R.gymEnd), "Whey, 1 scoop", "food");
+  } else {
+    if (i === 5) add(at("08:00"), "Easy walk 45–60 min, then the wall squat", "fit", "Missed a weekday workout? Do it now instead of the walk.");
+    add(at(R.snack), `Snack: ${esc(m.snack.split(":")[0])}`, "food");
+    add(at("17:15"), "Whey, 1 scoop", "food");
+  }
+  add(at(R.dinner), `Dinner: ${esc(m.dish)}`, "food", `Today ≈ ${m.kcal.toLocaleString()} kcal / ${m.p} g protein · ${esc(m.type)} · low salt · kitchen closes after`);
+  const wm = at(R.walk);
+  add(wm, `Walk ${R.walkMin}+ min`, "fit", walkAdvice(t, wm));
+  add(wm + (+R.walkMin || 10), i < 5 ? "Free time · TV is fine now if the workout's done" : "Free time with the family", "rest");
+  add(at(R.screensOff), "Screens off · TV off", "rest");
+  add(at(R.bed), "Bed", "rest");
+  return items.sort((a, b) => a.m - b.m);
+}
+function guideHtml(t) {
+  const items = guideItems(t), dw = wxDay(t);
+  let open = true; try { open = localStorage.getItem("guideOpen") !== "0"; } catch (e) {}
+  const nowM = t === TODAY ? (() => { const p = new Intl.DateTimeFormat("en-US", { timeZone: "America/Chicago", hour: "numeric", minute: "numeric", hourCycle: "h23" }).formatToParts(new Date()); return +p.find(x => x.type === "hour").value * 60 + +p.find(x => x.type === "minute").value; })() : -1;
+  let nowIdx = -1; items.forEach((x, k) => { if (x.m <= nowM) nowIdx = k; });
+  const wx = dw ? `☀ ${t12(dw.rise)} · 🌙 ${t12(dw.set)} · ${dw.hi}°/${dw.lo}°F · rain ${dw.rain}% · ${esc(S.location.label)}` : (WX ? "No forecast for this date (forecasts cover the next 16 days)." : "Weather loading…");
+  return `<section class="card" id="guide"><details${open ? " open" : ""} id="guideD"><summary>Hour by hour <small>${fmt(t, { weekday: "short", month: "short", day: "numeric" })}</small></summary>
+    <p class="wx">${wx}</p><ol class="guide">${items.map((x, k) => `<li class="t-${x.type}${k === nowIdx ? " now" : ""}"><span class="gt">${t12(x.m)}</span><span>${x.label}${x.note ? `<small>${x.note}</small>` : ""}</span></li>`).join("")}</ol></details></section>`;
+}
+function gymToggleHtml(t) {
+  const on = loadGym(t);
+  return `<button type="button" class="gymtog${on ? " on" : ""}" id="gymTog" aria-pressed="${on}">${on ? "✅ I went to the gym" : "💪 Did I go to the gym? Tap if yes"}</button>`;
+}
+function monthHtml() {
+  const c = new Date(cur), y = c.getUTCFullYear(), m = c.getUTCMonth(), first = Date.UTC(y, m, 1);
+  let t = first - dow(first) * DAY, cells = "", went = 0;
+  const dl = [];
+  do {
+    for (let i = 0; i < 7; i++, t += DAY) {
+      const inM = new Date(t).getUTCMonth() === m, sd = schoolDay(t), g = loadGym(t) || workoutDone(t), dls = deadlinesOn(t);
+      if (inM && g) went++;
+      if (inM) for (const x of dls) dl.push(`<li><b>${fmt(t, { month: "short", day: "numeric" })}</b> ${esc(x)}</li>`);
+      const dots = (isOfficeDay(t) ? '<i class="d work"></i>' : "") + (sd ? '<i class="d family"></i>' : "")
+        + (dow(t) < 5 ? '<i class="d fit"></i>' : "") + (dls.length ? '<i class="d dl"></i>' : "");
+      cells += `<button class="mc${inM ? "" : " out"}${t === TODAY ? " today" : ""}" data-t="${t}" aria-label="${fmt(t, { weekday: "long", month: "long", day: "numeric" })}"><b>${new Date(t).getUTCDate()}</b><span class="dots">${dots}</span>${g ? '<i class="went">✓</i>' : ""}</button>`;
+    }
+  } while (new Date(t).getUTCMonth() === m);
+  return `<section class="card"><div class="mhead"><button class="nav" id="mPrev" aria-label="Previous month">‹</button><h2>${fmt(first, { month: "long", year: "numeric" })}</h2><button class="nav" id="mNext" aria-label="Next month">›</button></div>
+    <div class="mgrid">${["M", "T", "W", "T", "F", "S", "S"].map(x => `<span class="wd">${x}</span>`).join("")}${cells}</div>
+    <div class="legend"><span><i class="d work"></i>Office</span><span><i class="d family"></i>School run</span><span><i class="d fit"></i>Gym day</span><span><i class="d dl"></i>Deadline</span><span>✓ Went to gym</span></div>
+    <p class="note">Went to the gym ${went} day${went === 1 ? "" : "s"} this month. Tap a day to open it.</p>
+    ${officeMonthHtml(first)}${dl.length ? `<p class="sec">Deadlines this month</p><ul class="mlist">${dl.join("")}</ul>` : ""}</section>`;
+}
+
+function settingsHtml() {
+  const v = p => esc(p.split(".").reduce((o, k) => o[k], S));
+  const time = (p, label) => `<label>${label}<input type="time" data-p="${p}" value="${v(p)}"></label>`;
+  const text = (p, label, ph = "") => `<label>${label}<input type="text" data-p="${p}" value="${v(p)}" placeholder="${ph}"></label>`;
+  const dates = (p, label) => `<label>${label}<textarea data-p="${p}" data-kind="dates" placeholder="2026-11-10, 2026-11-12, …">${esc(p.split(".").reduce((o, k) => o[k], S).join(", "))}</textarea></label>`;
+  const wd = S.office.weekdays;
+  return `<section class="card set"><h2>Settings</h2>
+    <p class="note">Saved on this device only. Use Export to back up, and Import on your other device. Changing settings updates this app. To update the Google Calendar reminders, ask Claude.</p>
+    <p class="saved" id="saved"></p>
+    <details open><summary>${esc(S.kid1.name)}: school run</summary><div class="set">
+      ${text("kid1.name", "Name")}
+      <div class="grid2">${time("kid1.dropTime", "Drop time (B days, blank = early)")}${time("kid1.pickupTime", "Pickup by (A days)")}</div>
+      ${dates("kid1.aDays", "A days (office + pickup)")}
+      ${dates("kid1.bDays", "B days (drop + work from home)")}
+      <label>College starts (school-run rules switch off from this date)<input type="date" data-p="kid1.collegeStart" value="${v("kid1.collegeStart")}"></label>
+    </div></details>
+    <details><summary>${esc(S.kid2.name)}</summary><div class="set">
+      ${text("kid2.name", "Name")}
+      <div class="grid2">${time("kid2.schoolStart", "School starts")}${time("kid2.schoolEnd", "School ends")}</div>
+      <label>Activities, one per line, starting with the day<textarea data-p="kid2.activities" placeholder="Tue 4:30–6:00 PM dance">${v("kid2.activities")}</textarea></label>
+    </div></details>
+    <details><summary>Office</summary><div class="set">
+      <label>Minimum office days a month<input type="number" min="0" max="23" data-p="office.minDays" value="${v("office.minDays")}"></label>
+      <label>Office days are<select data-p="office.rule"><option value="pickup"${S.office.rule === "pickup" ? " selected" : ""}>Pickup (A) days</option><option value="weekdays"${S.office.rule === "weekdays" ? " selected" : ""}>Fixed weekdays</option></select></label>
+      <div class="wk">${["Mon", "Tue", "Wed", "Thu", "Fri"].map((d, i) => `<label><input type="checkbox" data-wd="${i}"${wd.includes(i) ? " checked" : ""}>${d}</label>`).join("")}</div>
+      <div class="grid2">${time("office.arrive", "Arrive")}${time("office.leave", "Leave")}</div>
+    </div></details>
+    <details><summary>Routines</summary><div class="set">
+      <p class="note">The workouts themselves stay Mon–Fri and yoga stays Tue/Thu/Sat/Sun. Change their times here.</p>
+      <div class="grid2">${time("routine.wake", "Wake")}${time("routine.yoga", "Yoga")}</div>
+      ${time("routine.leaveHome", "Leave home for the office")}
+      <div class="grid2">${time("routine.gymStart", "Gym starts")}${time("routine.gymEnd", "Gym ends")}</div>
+      <div class="grid2">${time("routine.snack", "Snack")}${time("routine.dinner", "Dinner")}</div>
+      <div class="grid2">${time("routine.walk", "Walk")}<label>Walk minutes<input type="number" min="5" max="90" data-p="routine.walkMin" value="${v("routine.walkMin")}"></label></div>
+      <div class="grid2">${time("routine.screensOff", "TV and screens off")}${time("routine.bed", "Bed")}</div>
+    </div></details>
+    <details><summary>Weather location</summary><div class="set">
+      <p class="note">City-level only, used for sunrise, sunset, rain and temperature.</p>
+      ${text("location.label", "Place name")}
+      <div class="grid2"><label>Latitude<input type="number" step="any" data-kind="float" data-p="location.lat" value="${v("location.lat")}"></label><label>Longitude<input type="number" step="any" data-kind="float" data-p="location.lon" value="${v("location.lon")}"></label></div>
+    </div></details>
+    <details><summary>Deadlines</summary><div class="set">
+      <label>One per line: date, space, what's due. Shown on that day and in the month view.<textarea data-p="deadlines" placeholder="2026-12-01 Scholarship application due">${v("deadlines")}</textarea></label>
+    </div></details>
+    <details><summary>Backup</summary><div class="set">
+      <div class="btnrow"><button type="button" id="exportS">Export file</button>
+        <label class="btn" for="importS">Import file</label><input type="file" id="importS" accept=".json,application/json" hidden>
+        <button type="button" id="resetS">Reset to defaults</button></div>
+    </div></details>
+    <div class="btnrow"><button type="button" class="primary" id="doneS">Done</button></div></section>`;
+}
+function setPath(p, val) { const ks = p.split("."), last = ks.pop(); ks.reduce((o, k) => o[k], S)[last] = val; }
+function flashSaved(msg) { const el = document.getElementById("saved"); if (el) { el.textContent = msg; setTimeout(() => { if (el.textContent === msg) el.textContent = ""; }, 2500); } }
+
+function scoreHtml(monday) {
+  let work = 0, days = 0;
+  for (let i = 0; i < 7; i++) { const t = monday + i * DAY; if (workoutDone(t)) work++; if (moved(t)) days++; }
+  return `<span>This week: ${work}/5 workout days · moved ${days}/7</span><small>Short version counts. No 2 zero days in a row.</small>`;
+}
+
+function alarmHtml(t) {
+  if (t !== TODAY || t - DAY < PLAN_START || moved(t) || moved(t - DAY)) return "";
+  return `<div class="alarm">Yesterday was a zero day. Rule: never two in a row. Do just the 10-min walk today, whatever else happens.</div>`;
+}
+
+function planB(t) {
+  if (!GYM_DAYS.includes(dow(t))) return "";
+  return `<details><summary>Not feeling it?</summary><ul class="plain">
+    <li><b>Thinking "some other day":</b> answer with "short version today". There is no some other day.</li>
+    <li><b>Tired:</b> warm-up + the ANCHOR moves only (about 25 min; Athletic day: warm-up + agility). That counts as a full workout day.</li>
+    <li><b>Really don't want to:</b> go anyway and do 10 minutes on the bike. After that you may leave, no guilt.</li>
+    <li><b>Sat down and it's past 4:30:</b> go anyway if you can. If not, do the walk + wall squat, and do this workout tomorrow (tap this day in the strip above).</li>
+    <li><b>Missed it:</b> Saturday morning is your make-up slot. Never try to make up two in one day.</li></ul></details>`;
+}
+
+function rulesCard() {
+  return `<section class="card"><details><summary>My 5 rules</summary><ul class="plain">
+    <li><b>Mon–Fri: TV only between my workout and ${T(S.routine.screensOff)}.</b> Friday and Saturday nights are free for family time.</li>
+    <li><b>Gym days: clothes on before you sit.</b> Walk in, eat, change, keys in hand at 4:15.</li>
+    <li><b>Every day: 10-min walk after dinner.</b> Even on the worst day.</li>
+    <li><b>Never two zero days in a row.</b> One miss is nothing. Two starts a slide.</li>
+    <li><b>A bad day gets the short version, not a skip.</b> Short counts toward your 5.</li></ul>
+    <label class="note" for="why">My why, in my own words (shows at the top every day):</label>
+    <input id="why" maxlength="120" placeholder="Why do you actually want this?" value="${esc(loadWhy())}">
+    <p class="note">Ticks and your why are saved on this device only, so use your phone.</p></details></section>`;
+}
+
+function workoutCard(t) {
+  const wk = weekOf(t), cyc = (wk - 1) % 4 + 1, w = dayData(t), isGym = GYM_DAYS.includes(dow(t));
+  const parts = w.title.split(" - "), head = parts[0], focus = parts.slice(1).join(" - ");
+  const R = S.routine, gs = toMin(R.gymStart);
+  const job = isGym ? `TV off. No couch. Eat in the kitchen, gym clothes on, keys in hand at ${t12(gs - 15)}. TV is your reward after.` : w.job;
+  const when = isGym ? `${T(R.gymStart)}–${T(R.gymEnd)}` : w.when.replace("5:05 AM", T(R.yoga));
+  const done = new Set(loadDone(t));
+  let n = 0, body = "";
+  for (const s of w.sections) {
+    body += `<p class="sec">${esc(s.name.replace(/^\d\)\s*/, ""))}</p><ol class="moves">`;
+    for (const m of s.moves) {
+      n++;
+      const tag = m.t === "Anchor" ? `<span class="tag anchor">ANCHOR</span>` : (m.t === "New" && (cyc === 2 || cyc === 3) ? `<span class="tag new">NEW</span>` : "");
+      const restTxt = m.r && m.r !== "-" ? `<span class="rest">rest ${esc(m.r)}</span>` : "";
+      const wt = m.w && m.w !== "-" ? `<span class="wt">${esc(m.w)}</span>` : "";
+      body += `<li class="mv${done.has(n) ? " done" : ""}" data-n="${n}"><span class="n">${n}</span>
+        <div><div class="name"><a href="${esc(m.l)}" target="_blank" rel="noopener">${esc(m.n)}</a>${tag}</div>
+        <div class="row"><span class="sets">${esc(m.s)}</span>${wt}${restTxt}</div></div>
+        <button class="tick" aria-label="Mark ${esc(m.n)} done" aria-pressed="${done.has(n)}">✓</button></li>`;
+    }
+    body += `</ol>`;
+  }
+  return `<section class="card"><h2>${esc(head)}</h2><p class="focus">${esc(focus)}</p>
+    ${alarmHtml(t)}${runHtml(t)}<div class="job">${esc(job)}</div>
+    <div class="chips"><span class="chip">${esc(when)}</span>${isGym ? `<span class="chip">Week ${wk} · ${cyc}/4${cyc === 4 ? " · DELOAD" : ""}</span><span class="chip">Effort 7/10</span>` : ""}</div>
+    <div class="bp">BP ≥160/100 → walk + stretch only · ≥180/120 or chest pain → stop</div>
+    ${planB(t)}
+    <div class="progress"><div class="track"><div class="fill" id="fill"></div></div><span id="count">0 / ${n}</span></div>
+    ${body}
+    <p class="note">Tap ✓ as you finish each one.${isGym ? " Top of the rep range on every set with 2+ reps spare → next time +5 lb upper / +10 lb legs. Form breaks → drop 5–10 lb." : ""}${isDark(t) ? " Walk in the dark: lit route + LED clip, or indoors." : ""}</p></section>`;
+}
+
+function foodCard(t, open) {
+  const i = dow(t), d = DAYS[i], m = DATA.meals[d], isGym = GYM_DAYS.includes(i), next = DAYS[(i + 1) % 7];
+  return `<section class="card"><details${open ? " open" : ""}><summary>Food · ${m.kcal.toLocaleString()} kcal / ${m.p} g</summary><table><tbody>
+    ${d === "Friday" ? `<tr><td>5:10 AM</td><td>Optional weigh-in</td></tr>` : ""}
+    <tr><td>5:40 AM</td><td>Ragi ganji + saunf water</td></tr>
+    <tr><td>${T(S.routine.snack)}</td><td><b>Snack:</b> ${esc(m.snack)}</td></tr>
+    <tr><td>${isGym ? T(S.routine.gymEnd) : "5:15 PM"}</td><td>Whey, 1 scoop</td></tr>
+    <tr><td>${T(S.routine.dinner)}</td><td><b><a href="${esc(m.recipe)}" target="_blank" rel="noopener">${esc(m.dish)}</a></b><br>Your plate: ${esc(m.plate)}</td></tr>
+    <tr><td>Tonight</td><td>Prep for ${next}: ${esc(DATA.meals[next].prep)}</td></tr></tbody></table></details></section>`;
+}
+
+function updateProgress() {
+  const all = document.querySelectorAll("li.mv").length, d = document.querySelectorAll("li.mv.done").length;
+  const f = document.getElementById("fill"), c = document.getElementById("count");
+  if (f) f.style.width = (all ? 100 * d / all : 0) + "%";
+  if (c) c.textContent = `${d} / ${all} done`;
+}
+
+function render() {
+  const wk = weekOf(cur), di = dow(cur), monday = cur - di * DAY;
+  document.getElementById("dateText").textContent = fmt(cur, { weekday: "short", month: "short", day: "numeric" });
+  document.getElementById("weekChip").textContent = `${cur === TODAY ? "Today · " : ""}Week ${wk} · cycle ${(wk - 1) % 4 + 1}/4`;
+  document.getElementById("days").innerHTML = DAYS.map((d, i) => {
+    const t = monday + i * DAY;
+    return `<button data-t="${t}" ${t === cur ? 'aria-current="date"' : ""} class="${t === TODAY ? "today" : ""}${moved(t) ? " moved" : ""}" aria-label="${d}"><b>${SHORT[i]}</b><span>${new Date(t).getUTCDate()}</span></button>`;
+  }).join("");
+  document.getElementById("score").innerHTML = scoreHtml(monday) + officeMonthHtml(cur);
+  if (view === "settings") { document.getElementById("main").innerHTML = settingsHtml(); return; }
+  if (view === "month") { document.getElementById("main").innerHTML = monthHtml(); return; }
+  document.getElementById("main").innerHTML = gymToggleHtml(cur) + guideHtml(cur) + sparkHtml(cur) + coachCard(cur) + workoutCard(cur) + foodCard(cur, di >= 5) + rulesCard();
+  updateProgress();
+  try { history.replaceState(null, "", "#d" + key(cur)); } catch (e) {}
+}
+document.getElementById("days").addEventListener("click", e => { const b = e.target.closest("button[data-t]"); if (b) { cur = +b.dataset.t; render(); window.scrollTo(0, 0); } });
+document.getElementById("prev").addEventListener("click", () => { cur -= DAY; render(); });
+document.getElementById("next").addEventListener("click", () => { cur += DAY; render(); });
+document.getElementById("main").addEventListener("click", e => {
+  const b = e.target.closest(".tick"); if (!b) return;
+  const li = b.closest("li.mv"), n = +li.dataset.n, on = !li.classList.contains("done");
+  li.classList.toggle("done", on); b.setAttribute("aria-pressed", on);
+  const s = new Set(loadDone(cur)); if (on) s.add(n); else s.delete(n); saveDone(cur, [...s]); updateProgress();
+  const btn = document.querySelector(`#days button[data-t="${cur}"]`);
+  if (btn) btn.classList.toggle("moved", moved(cur));
+  document.getElementById("score").innerHTML = scoreHtml(cur - dow(cur) * DAY) + officeMonthHtml(cur);
+  const al = document.querySelector(".alarm"); if (al && moved(cur)) al.remove();
+});
+document.getElementById("cal").addEventListener("click", () => { view = view === "month" ? "day" : "month"; render(); window.scrollTo(0, 0); });
+document.getElementById("main").addEventListener("click", e => {
+  const tog = e.target.closest("#gymTog");
+  if (tog) {
+    const on = !loadGym(cur); saveGym(cur, on);
+    tog.classList.toggle("on", on); tog.setAttribute("aria-pressed", on); tog.textContent = on ? "✅ I went to the gym" : "💪 Did I go to the gym? Tap if yes";
+    const btn = document.querySelector(`#days button[data-t="${cur}"]`); if (btn) btn.classList.toggle("moved", moved(cur));
+    document.getElementById("score").innerHTML = scoreHtml(cur - dow(cur) * DAY) + officeMonthHtml(cur);
+    const al = document.querySelector(".alarm"); if (al && moved(cur)) al.remove();
+    return;
+  }
+  if (e.target.closest("#mPrev, #mNext")) { const c = new Date(cur); cur = Date.UTC(c.getUTCFullYear(), c.getUTCMonth() + (e.target.closest("#mNext") ? 1 : -1), 1); render(); return; }
+  const cell = e.target.closest(".mc[data-t]");
+  if (cell) { cur = +cell.dataset.t; view = "day"; render(); window.scrollTo(0, 0); }
+});
+document.getElementById("gear").addEventListener("click", () => { view = view === "settings" ? "day" : "settings"; render(); window.scrollTo(0, 0); });
+document.getElementById("main").addEventListener("click", e => {
+  const id = e.target.id;
+  if (id === "doneS") { view = "day"; render(); window.scrollTo(0, 0); }
+  else if (id === "exportS") {
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(new Blob([JSON.stringify(S, null, 2)], { type: "application/json" }));
+    a.download = "vamfit-settings.json"; document.body.appendChild(a); a.click(); a.remove();
+  } else if (id === "resetS" && confirm("Reset all settings to the defaults on this device?")) { S = merge(DEFAULTS, {}); saveSettings(); render(); flashSaved("Reset ✓"); }
+});
+document.getElementById("main").addEventListener("change", e => {
+  const el = e.target;
+  if (el.id === "importS" && el.files && el.files[0]) {
+    el.files[0].text().then(txt => { const o = JSON.parse(txt); if (!o || typeof o !== "object" || !o.kid1) throw new Error("bad file"); S = merge(DEFAULTS, o); saveSettings(); render(); flashSaved("Imported ✓"); })
+      .catch(() => flashSaved("That file isn't a VamFit settings file."));
+    return;
+  }
+  if (el.dataset.wd !== undefined) {
+    const i = +el.dataset.wd, set = new Set(S.office.weekdays); if (el.checked) set.add(i); else set.delete(i);
+    S.office.weekdays = [...set].sort(); saveSettings(); flashSaved("Saved ✓"); document.getElementById("score").innerHTML = scoreHtml(cur - dow(cur) * DAY) + officeMonthHtml(cur); return;
+  }
+  if (el.dataset.p) {
+    let val = el.value;
+    if (el.dataset.kind === "dates") val = [...new Set((val.match(/\d{4}-\d{2}-\d{2}/g) || []))].sort();
+    else if (el.dataset.kind === "float") val = parseFloat(val) || 0;
+    else if (el.type === "number") val = Math.max(0, parseInt(val, 10) || 0);
+    else if (el.type === "text") val = val.trim();
+    setPath(el.dataset.p, val); saveSettings(); flashSaved("Saved ✓");
+    document.getElementById("score").innerHTML = scoreHtml(cur - dow(cur) * DAY) + officeMonthHtml(cur);
+    if (el.dataset.kind === "dates") el.value = val.join(", ");
+    return;
+  }
+  if (el.id !== "why") return;
+  try { localStorage.setItem("why", e.target.value.trim()); } catch (err) {}
+  render();
+});
+document.getElementById("main").addEventListener("toggle", e => { if (e.target.id === "guideD") try { localStorage.setItem("guideOpen", e.target.open ? "1" : "0"); } catch (err) {} }, true);
+loadWx();
+window.addEventListener("hashchange", () => { const h = fromHash(); if (h !== null && h !== cur) { cur = h; render(); } });
+render();
+</script>
