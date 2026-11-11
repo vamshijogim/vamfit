@@ -6,7 +6,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from plan_library import MEALS, meal_totals, day_plan, YOGA
 from start_weights import start_for
 
-CARD = "https://vamfit-gym.netlify.app"   # his own Netlify site (2026-10-23: must not depend on a Claude membership)
+CARD = "https://vamshijogim.github.io/vamfit/"   # his own Netlify site (2026-10-23: must not depend on a Claude membership)
 _D = list(MEALS)
 NEXT = {d: _D[(i + 1) % 7] for i, d in enumerate(_D)}
 
